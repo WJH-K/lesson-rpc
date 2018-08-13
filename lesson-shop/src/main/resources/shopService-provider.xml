@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="GBK"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd
+    http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+    http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd
+    http://code.alibabatech.com/schema/dubbo
+    http://code.alibabatech.com/schema/dubbo/dubbo.xsd
+    ">
+    <!--开启注解-->
+    <context:annotation-config />
+    <context:component-scan base-package="com.lesson.shopService" />
+    <!--dubbb服务名称-->
+    <dubbo:application name="dubbo_shopService"></dubbo:application>
+    <!--用dubbo协议在9420端口暴露服务-->
+    <dubbo:protocol name="dubbo" port="9420" host="127.0.0.1"/>
+    <!--dubbo注册中心-->
+    <dubbo:registry protocol="zookeeper" address="${zookeeper.address}"></dubbo:registry>
+    <dubbo:service interface="com.lesson.api.shopApi.ShopService" ref="shopService" timeout="5000"></dubbo:service>
+
+    <bean id="shopService" class="com.lesson.shopService.provider.ShopServiceImpl"></bean>
+
+    <!-- jedis 配置-->
+    <bean id="genericObjectPoolConfig" class="redis.clients.jedis.JedisPoolConfig" >
+        <!--最大空闲数-->
+        <property name="maxIdle" value="${redis.maxIdle}" />
+        <!--最大建立连接等待时间-->
+        <property name="maxWaitMillis" value="${redis.maxWait}" />
+        <!--是否在从池中取出连接前进行检验,如果检验失败,则从池中去除连接并尝试取出另一个-->
+        <property name="testOnBorrow" value="${redis.testOnBorrow}" />
+        <property name="maxTotal" value="${redis.maxTotal}" />
+        <property name="minIdle" value="${redis.minIdle}" />
+    </bean >
+    <!--redis单机配置、分片配置-->
+    <!--<bean id="jedisPool" class="com.lesson.shopService.common.redis.ShardedJedisPoolFactory">
+        <property name="hostAndPorts" value="@redis.address@"/>
+        <property name="poolConfig" ref="genericObjectPoolConfig"/>
+    </bean>
+    <bean id="cacheManager" class="com.lesson.shopService.common.redis.ShardedCacheManagerImpl">
+        <property name="pool" ref="jedisPool"></property>
+    </bean>-->
+    <!--redis集群配置-->
+    <bean id="JedisClusterFactory" class="com.lesson.shopService.common.redis.cluster.JedisClusterFactory">
+        <property name="hostAndPorts" value="${redis.address}"/>
+        <property name="maxRedirections" value="${redis.maxRedirections}"/>
+        <property name="timeout" value="${redis.timeout}"/>
+        <property name="genericObjectPoolConfig" ref="genericObjectPoolConfig"/>
+    </bean>
+    <bean id="cacheManager" class="com.lesson.shopService.common.redis.cluster.CacheManagerImpl">
+        <property name="pool" ref="JedisClusterFactory"></property>
+    </bean>
+</beans>
